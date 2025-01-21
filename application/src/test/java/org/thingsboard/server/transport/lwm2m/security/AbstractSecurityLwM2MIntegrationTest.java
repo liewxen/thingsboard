@@ -196,7 +196,7 @@ public abstract class AbstractSecurityLwM2MIntegrationTest extends AbstractLwM2M
                 false);
     }
 
-    protected void basicTestConnection(Security security, Security securityBs,
+    protected Device basicTestConnection(Security security, Security securityBs,
                                        LwM2MDeviceCredentials deviceCredentials,
                                        String endpoint,
                                        Lwm2mDeviceProfileTransportConfiguration transportConfiguration,
@@ -207,7 +207,7 @@ public abstract class AbstractSecurityLwM2MIntegrationTest extends AbstractLwM2M
                                        boolean isStartLw) throws Exception {
         DeviceProfile deviceProfile = createLwm2mDeviceProfile("profileFor" + endpoint, transportConfiguration);
         final Device device = createLwm2mDevice(deviceCredentials, endpoint, deviceProfile.getId());
-        createNewClient(security, securityBs, true, endpoint);
+        createNewClient(security, securityBs, true, endpoint, device.getId().getId().toString());
         lwM2MTestClient.start(isStartLw);
         if (isAwaitObserveReadAll) {
             awaitObserveReadAll(0, device.getId().getId().toString());
@@ -218,6 +218,8 @@ public abstract class AbstractSecurityLwM2MIntegrationTest extends AbstractLwM2M
                     log.warn("basicTestConnection started -> finishState: [{}] states: {}", finishState, lwM2MTestClient.getClientStates());
                     return lwM2MTestClient.getClientStates().contains(finishState) || lwM2MTestClient.getClientStates().contains(ON_REGISTRATION_STARTED);
                 });
+
+        awaitUpdateReg(1);
         await(awaitAlias)
                 .atMost(40, TimeUnit.SECONDS)
                 .until(() -> {
@@ -225,6 +227,7 @@ public abstract class AbstractSecurityLwM2MIntegrationTest extends AbstractLwM2M
                     return lwM2MTestClient.getClientStates().contains(finishState) || lwM2MTestClient.getClientStates().contains(ON_UPDATE_SUCCESS);
                 });
         Assert.assertTrue(lwM2MTestClient.getClientStates().containsAll(expectedStatuses));
+        return device;
     }
 
 
@@ -253,7 +256,7 @@ public abstract class AbstractSecurityLwM2MIntegrationTest extends AbstractLwM2M
         DeviceProfile deviceProfile = createLwm2mDeviceProfile("profileFor" + endpoint, transportConfiguration);
         final Device device = createLwm2mDevice(deviceCredentials, endpoint, deviceProfile.getId());
         String deviceIdStr = device.getId().getId().toString();
-        createNewClient(security, securityBs, true, endpoint);
+        createNewClient(security, securityBs, true, endpoint, deviceIdStr);
         lwM2MTestClient.start(true);
         awaitObserveReadAll(0, deviceIdStr);
         await(awaitAlias)
@@ -262,6 +265,8 @@ public abstract class AbstractSecurityLwM2MIntegrationTest extends AbstractLwM2M
                     log.warn("basicTest First Connection started -> finishState: [{}] states: {}", ON_REGISTRATION_SUCCESS, lwM2MTestClient.getClientStates());
                     return lwM2MTestClient.getClientStates().contains(ON_REGISTRATION_SUCCESS) || lwM2MTestClient.getClientStates().contains(ON_REGISTRATION_STARTED);
                 });
+
+        awaitUpdateReg(1);
         await(awaitAlias)
                 .atMost(40, TimeUnit.SECONDS)
                 .until(() -> {
@@ -288,6 +293,8 @@ public abstract class AbstractSecurityLwM2MIntegrationTest extends AbstractLwM2M
                     log.warn("basicTestConnection started -> finishState: [{}] states: {}", ON_REGISTRATION_SUCCESS, lwM2MTestClient.getClientStates());
                     return lwM2MTestClient.getClientStates().contains(ON_REGISTRATION_SUCCESS) || lwM2MTestClient.getClientStates().contains(ON_REGISTRATION_STARTED);
                 });
+
+        awaitUpdateReg(1);
         await(awaitAlias)
                 .atMost(40, TimeUnit.SECONDS)
                 .until(() -> {
@@ -392,12 +399,12 @@ public abstract class AbstractSecurityLwM2MIntegrationTest extends AbstractLwM2M
 
 
     protected void initDeviceCredentialsNoSek() {
-        clientEndpoint = CLIENT_ENDPOINT_NO_SEC + "_" + randomSuffix.nextInt(100);
+        clientEndpoint = CLIENT_ENDPOINT_NO_SEC + "_" + randomSuffix.nextInt(1000);
         security = SECURITY_NO_SEC;
         deviceCredentials = getDeviceCredentialsNoSec(createNoSecClientCredentials(clientEndpoint));
     }
     protected void initDeviceCredentialsPsk() {
-        int suf =  randomSuffix.nextInt(10);
+        int suf =  randomSuffix.nextInt(1000);
         clientEndpoint = CLIENT_ENDPOINT_PSK + "_" + suf;
         String identity = CLIENT_PSK_IDENTITY + "_" + suf;
         clientCredentials = new PSKClientCredential();
